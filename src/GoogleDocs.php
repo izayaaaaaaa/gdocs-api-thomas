@@ -28,7 +28,7 @@ class GoogleDocs
         $this->driveService = new Google_Service_Drive($client);
     }
 
-    public function duplicateDocument($documentId, $email) {
+    public function duplicateDocument($documentId, $email, $imageUrl, $imagePlaceholder) {
         // Create a new document
         $newDocument = new Google_Service_Docs_Document();
         $newDocument->setTitle('Duplicate of ' . $documentId);
@@ -46,14 +46,38 @@ class GoogleDocs
                 foreach ($paragraph->getElements() as $paragraphElement) {
                     if ($paragraphElement->getTextRun()) {
                         $textRun = $paragraphElement->getTextRun();
-                        $requests[] = new Google_Service_Docs_Request([
-                            'insertText' => [
-                                'location' => [
-                                    'index' => 1,
+                        $text = $textRun->getContent();
+                        // Check for placeholders and replace them with image insert requests
+                        if (strpos($text, $imagePlaceholder) !== false) {
+                            // Example: Replace 'IMAGE_PLACEHOLDER' with an actual image URL
+                            $requests[] = new Google_Service_Docs_Request([
+                                'insertInlineImage' => [
+                                    'location' => [
+                                        'index' => 1, // Adjust the index as needed
+                                    ],
+                                    'uri' => $imageUrl,
+                                    'objectSize' => [
+                                        'height' => [
+                                            'magnitude' => 300,
+                                            'unit' => 'PT',
+                                        ],
+                                        'width' => [
+                                            'magnitude' => 300,
+                                            'unit' => 'PT',
+                                        ],
+                                    ],
                                 ],
-                                'text' => $textRun->getContent(),
-                            ],
-                        ]);
+                            ]);
+                        } else {
+                            $requests[] = new Google_Service_Docs_Request([
+                                'insertText' => [
+                                    'location' => [
+                                        'index' => 1,
+                                    ],
+                                    'text' => $text,
+                                ],
+                            ]);
+                        }
                     }
                 }
             }
