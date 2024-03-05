@@ -11,6 +11,7 @@ use Google_Service_Drive;
 use Google_Service_Drive_Permission;
 use Google_Service_Docs_Request;
 use Google_Service_Docs_BatchUpdateDocumentRequest;
+use Google_Service_Docs_ExportDocumentRequest;
 
 class GoogleDocs
 {
@@ -28,7 +29,7 @@ class GoogleDocs
         $this->driveService = new Google_Service_Drive($client);
     }
 
-    public function duplicateDocument($documentId, $email, $imageUrl, $imagePlaceholder) {
+    public function duplicateDocument($documentId, $email, $imageUrl, $imagePlaceholderString) {
         // Create a new document
         $newDocument = new Google_Service_Docs_Document();
         $newDocument->setTitle('Duplicate of ' . $documentId);
@@ -40,6 +41,7 @@ class GoogleDocs
 
         // Prepare the requests to update the new document's content
         $requests = [];
+        $index = 1; // Start index for insert requests
         foreach ($content as $element) {
             if ($element->getParagraph()) {
                 $paragraph = $element->getParagraph();
@@ -47,22 +49,28 @@ class GoogleDocs
                     if ($paragraphElement->getTextRun()) {
                         $textRun = $paragraphElement->getTextRun();
                         $text = $textRun->getContent();
+                        echo "Processing text: " . $text . "\n"; // Log the text being processed
+
                         // Check for placeholders and replace them with image insert requests
-                        if (strpos($text, $imagePlaceholder) !== false) {
-                            // Example: Replace 'IMAGE_PLACEHOLDER' with an actual image URL
+                        if (strpos($text, $imagePlaceholderString) !== false) {
+                            echo "Placeholder found at index: " . $index . "\n"; // Log when a placeholder is found
+
+                            // Calculate the correct index based on the position of the placeholder string
+                            // This is a simplified example; you might need to adjust the logic based on your document's structure
+                            // $correctIndex = $index + strpos($text, $imagePlaceholderString);
                             $requests[] = new Google_Service_Docs_Request([
                                 'insertInlineImage' => [
                                     'location' => [
-                                        'index' => 1, // Adjust the index as needed
+                                        'index' => $index,
                                     ],
                                     'uri' => $imageUrl,
                                     'objectSize' => [
                                         'height' => [
-                                            'magnitude' => 300,
+                                            'magnitude' => 250,
                                             'unit' => 'PT',
                                         ],
                                         'width' => [
-                                            'magnitude' => 300,
+                                            'magnitude' => 250,
                                             'unit' => 'PT',
                                         ],
                                     ],
@@ -72,12 +80,13 @@ class GoogleDocs
                             $requests[] = new Google_Service_Docs_Request([
                                 'insertText' => [
                                     'location' => [
-                                        'index' => 1,
+                                        'index' => $index,
                                     ],
                                     'text' => $text,
                                 ],
                             ]);
                         }
+                        $index++; // Increment the index for the next insert request
                     }
                 }
             }
@@ -98,5 +107,15 @@ class GoogleDocs
         $this->driveService->permissions->create($newDocument->getDocumentId(), $permission);
 
         return $newDocument->getDocumentId();
+    }
+
+    public function exportDocumentAsPdf($documentId) {
+        try {
+            $response = $this->driveService->files->export($documentId, 'application/pdf');
+            return $response->getBody();
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            return null;
+        }
     }
 }
