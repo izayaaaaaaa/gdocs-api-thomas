@@ -12,6 +12,6 @@ $documentId = $_ENV['GOOGLE_DOCUMENT_ID'];
 $name = $_ENV['GOOGLE_APP_NAME'];
 
 $service = new GoogleDocs($name, $credentials);
-$email = 'izaya.orihara0011@gmail.com'; // Replace with the email you want to share with
+$email = $_ENV['EMAIL_TO_SHARE_DOCUMENT_WITH'];
 $newDocumentId = $service->duplicateDocument($documentId, $email);
 echo "\nDocument duplicated successfully. New document ID: " . $newDocumentId;
